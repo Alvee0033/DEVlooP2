@@ -11,7 +11,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --only=production || npm ci
 
 # Copy source
-COPY server ./server
+COPY index.js ./
 
 # Expose API port
 EXPOSE 3000
@@ -19,5 +19,5 @@ EXPOSE 3000
 # Ensure Node listens on all interfaces inside container
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
 
-CMD ["node", "server/index.js"]
+CMD ["node", "index.js"]
 

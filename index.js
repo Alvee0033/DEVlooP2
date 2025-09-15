@@ -2,7 +2,6 @@ import express from 'express';
 
 const app = express();
 app.use(express.json());
-// CORS for file:// tester
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
@@ -11,26 +10,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// In-memory stores
 const voters = new Map();
 const candidates = new Map();
-const votes = []; // {vote_id, voter_id, candidate_id, timestamp, weight}
+const votes = [];
 let nextVoteId = 101;
 
 const nowIso = () => new Date().toISOString();
-const ensureCandidate = (candidate_id) => {
-  if (!candidates.has(candidate_id)) {
-    candidates.set(candidate_id, { candidate_id, name: `C${candidate_id}`, party: 'Party', votes: 0 });
-  }
-  return candidates.get(candidate_id);
-};
-const ensureVoter = (voter_id) => {
-  if (!voters.has(voter_id)) {
-    voters.set(voter_id, { voter_id, name: `V${voter_id}`, age: 22, has_voted: false });
-  }
-  return voters.get(voter_id);
-};
-// Autokey helpers (shared by Q16 and Q17)
 const isAlpha = (s) => /^[a-zA-Z]+$/.test(s || '');
 const toIdx = (ch) => (ch || 'a').toLowerCase().charCodeAt(0) - 97;
 const toCh = (i) => String.fromCharCode(((i % 26) + 26) % 26 + 97);
@@ -49,7 +34,6 @@ const autokeyDecrypt = (ct, key) => {
   return pt;
 };
 
-// Q1
 app.post('/api/voters', (req, res) => {
   const { voter_id, name, age } = req.body || {};
   if (voters.has(voter_id)) return res.status(409).json({ message: `voter with id: ${voter_id} already exists` });
@@ -59,20 +43,17 @@ app.post('/api/voters', (req, res) => {
   return res.status(218).json(voter);
 });
 
-// Q2
 app.get('/api/voters/:voter_id', (req, res) => {
   const id = Number(req.params.voter_id);
   if (!voters.has(id)) return res.status(417).json({ message: `voter with id: ${id} was not found` });
   return res.status(222).json(voters.get(id));
 });
 
-// Q3
 app.get('/api/voters', (_req, res) => {
   const list = Array.from(voters.values()).map(v => ({ voter_id: v.voter_id, name: v.name, age: v.age }));
   return res.status(223).json({ voters: list });
 });
 
-// Q4
 app.put('/api/voters/:voter_id', (req, res) => {
   const id = Number(req.params.voter_id);
   if (!voters.has(id)) return res.status(417).json({ message: `voter with id: ${id} was not found` });
@@ -84,14 +65,12 @@ app.put('/api/voters/:voter_id', (req, res) => {
   return res.status(224).json(updated);
 });
 
-// Q5
 app.delete('/api/voters/:voter_id', (req, res) => {
   const id = Number(req.params.voter_id);
   voters.delete(id);
   return res.status(225).json({ message: `voter with id: ${id} deleted successfully` });
 });
 
-// Q6
 app.post('/api/candidates', (req, res) => {
   const { candidate_id, name, party } = req.body || {};
   const candidate = { candidate_id, name, party, votes: 0 };
@@ -99,7 +78,6 @@ app.post('/api/candidates', (req, res) => {
   return res.status(226).json(candidate);
 });
 
-// Q7 & Q10
 app.get('/api/candidates', (req, res) => {
   const party = req.query.party;
   let list = Array.from(candidates.values()).map(c => ({ candidate_id: c.candidate_id, name: c.name, party: c.party }));
@@ -108,7 +86,6 @@ app.get('/api/candidates', (req, res) => {
   return res.status(code).json({ candidates: list });
 });
 
-// Q8
 app.post('/api/votes', (req, res) => {
   const { voter_id, candidate_id } = req.body || {};
   const voter = voters.get(voter_id);
@@ -122,7 +99,6 @@ app.post('/api/votes', (req, res) => {
   return res.status(228).json({ vote_id: vote.vote_id, voter_id, candidate_id, timestamp: vote.timestamp });
 });
 
-// Q9
 app.get('/api/candidates/:candidate_id/votes', (req, res) => {
   const id = Number(req.params.candidate_id);
   const cand = candidates.get(id);
@@ -130,7 +106,6 @@ app.get('/api/candidates/:candidate_id/votes', (req, res) => {
   return res.status(229).json({ candidate_id: id, votes: count });
 });
 
-// Q11
 app.get('/api/results', (_req, res) => {
   const results = Array.from(candidates.values())
     .map(c => ({ candidate_id: c.candidate_id, name: c.name, votes: c.votes || 0 }))
@@ -138,7 +113,6 @@ app.get('/api/results', (_req, res) => {
   return res.status(231).json({ results });
 });
 
-// Q12
 app.get('/api/results/winner', (_req, res) => {
   const results = Array.from(candidates.values()).map(c => ({ candidate_id: c.candidate_id, name: c.name, votes: c.votes || 0 }));
   const max = results.reduce((m, r) => Math.max(m, r.votes), 0);
@@ -146,14 +120,12 @@ app.get('/api/results/winner', (_req, res) => {
   return res.status(232).json({ winners });
 });
 
-// Q13
 app.get('/api/votes/timeline', (req, res) => {
   const candidate_id = Number(req.query.candidate_id);
   const timeline = votes.filter(v => v.candidate_id === candidate_id).map(v => ({ vote_id: v.vote_id, timestamp: v.timestamp }));
   return res.status(233).json({ candidate_id, timeline });
 });
 
-// Q14
 app.post('/api/votes/weighted', (req, res) => {
   const { voter_id, candidate_id } = req.body || {};
   const voter = voters.get(voter_id);
@@ -167,7 +139,6 @@ app.post('/api/votes/weighted', (req, res) => {
   return res.status(234).json({ vote_id: vote.vote_id, voter_id, candidate_id, weight });
 });
 
-// Q15
 app.get('/api/votes/range', (req, res) => {
   const candidate_id = Number(req.query.candidate_id);
   const from = new Date(String(req.query.from));
@@ -179,7 +150,6 @@ app.get('/api/votes/range', (req, res) => {
   return res.status(235).json({ candidate_id, from: from.toISOString(), to: to.toISOString(), votes_gained: gained });
 });
 
-// Q16
 app.post('/api/ballots/encrypted', (req, res) => {
   const { election_id, ciphertext, zk_proof, voter_pubkey, nullifier, signature } = req.body || {};
   if (!election_id || !ciphertext || !zk_proof || !voter_pubkey || !nullifier || !signature) {
@@ -190,7 +160,6 @@ app.post('/api/ballots/encrypted', (req, res) => {
   return res.status(236).json({ ballot_id: 'b_7f8c', status: 'accepted', nullifier: '0x4a1e...', anchored_at: nowIso() });
 });
 
-// Q17 (validate homomorphic aggregate via Autokey)
 app.post('/api/results/homomorphic', (req, res) => {
   const { cipher_aggregate, tally_key } = req.body || {};
   if (!cipher_aggregate || !tally_key) return res.status(425).json({ message: 'invalid homomorphic proof' });
@@ -204,7 +173,6 @@ app.post('/api/results/homomorphic', (req, res) => {
   });
 });
 
-// Q18
 app.post('/api/analytics/dp', (req, res) => {
   return res.status(238).json({
     answer: { '18-24': 10450, '25-34': 20110, '35-44': 18001, '45-64': 17320, '65+': 9022 },
@@ -213,12 +181,10 @@ app.post('/api/analytics/dp', (req, res) => {
   });
 });
 
-// Q19
 app.post('/api/ballots/ranked', (req, res) => {
   return res.status(239).json({ ballot_id: 'rb_2219', status: 'accepted' });
 });
 
-// Q20
 app.post('/api/audits/rla', (req, res) => {
   return res.status(240).json({ audit_id: 'rla_88a1', initial_sample_size: 1200, sampling_plan: 'base64(csv of county proportions and random seeds)', stopping_rule: 'Kaplan-Markov', status: 'in_progress' });
 });
@@ -226,3 +192,5 @@ app.post('/api/audits/rla', (req, res) => {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.listen(3000, () => console.log('API running on :3000'));
+
+
